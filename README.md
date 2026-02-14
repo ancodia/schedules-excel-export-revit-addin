@@ -2,6 +2,8 @@
 
 A Revit add-in that enables users to export multiple schedules from Autodesk Revit to Excel (.xlsx) format with advanced formatting and filtering options.
 
+<img width="301" height="440" alt="revit_clean(2)" src="https://github.com/user-attachments/assets/9ebd7fc6-0d32-4598-b775-6d2996cb466e" />
+
 ## Features
 
 - **Batch Export**: Export multiple Revit schedules to a single Excel workbook
