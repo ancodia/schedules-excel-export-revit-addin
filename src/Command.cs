@@ -1,26 +1,27 @@
 using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
-using OfficeOpenXml;
+using ClosedXML.Excel;
 using ScheduleExporter;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
+using System.Windows;
+using System.Windows.Threading;
+using System.Xml.Linq;
+using static System.Net.Mime.MediaTypeNames;
 
-namespace SchedulesExcelExport
-{
+namespace SchedulesExcelExport {
     [Transaction(TransactionMode.Manual)]
-    public partial class Command : IExternalCommand
-    {
+    public partial class Command : IExternalCommand {
         public Result Execute(
           ExternalCommandData commandData,
           ref string message,
-          ElementSet elements)
-        {
+          ElementSet elements) {
             UIApplication uiapp = commandData.Application;
             UIDocument uidoc = uiapp.ActiveUIDocument;
             Document doc = uidoc.Document;
@@ -38,28 +39,78 @@ namespace SchedulesExcelExport
                 .Select(schedule => schedule.Name)
                 .ToList();
 
-            try
-            {
-                ExportForm exportForm = new(scheduleNames);
-                var result = exportForm.ShowDialog();
+            try {
+                ExportWindow exportWindow = new(scheduleNames);
+                var result = exportWindow.ShowDialog();
 
-                if (result == DialogResult.OK)
-                {
-                    string filePath = exportForm.SelectedFilePath;
-                    bool writeAsString = exportForm.WriteAsString;
-                    bool excludeEmptyAllRows = exportForm.ExcludeEmptyRows;
-                    List<string> selectedScheduleNames = exportForm.SelectedSchedules;
+                if (result == true) {
+                    string filePath = exportWindow.SelectedFilePath;
+                    bool writeAsString = exportWindow.WriteAsString;
+                    bool excludeEmptyAllRows = exportWindow.ExcludeEmptyRows;
+                    List<string> selectedScheduleNames = exportWindow.SelectedSchedules;
 
-                    
+
                     List<ViewSchedule> selectedSchedules = schedules
                         .Where(schedule => selectedScheduleNames.Contains(schedule.Name))
                         .ToList();
 
-                    ExportToExcel(selectedSchedules, filePath, writeAsString, excludeEmptyAllRows);
+                    // Show loading window during export
+                    LoadingWindow loadingWindow = new LoadingWindow();
+                    loadingWindow.Show();
+
+                    // Force window to render
+                    loadingWindow.Dispatcher.Invoke(
+                        DispatcherPriority.Background,
+                        new Action(delegate { })
+                    );
+
+                    try {
+                        // Extract data from Revit
+                        var scheduleDataList = new List<(string name, List<List<object>> data)>();
+                        int currentSchedule = 0;
+                        int totalSchedules = selectedSchedules.Count;
+
+                        foreach (var schedule in selectedSchedules) {
+                            currentSchedule++;
+                            loadingWindow.UpdateStatus($"Processing schedule {currentSchedule} of {totalSchedules}: {schedule.Name}");
+
+                            // Force UI update
+                            loadingWindow.Dispatcher.Invoke(
+                                DispatcherPriority.Background,
+                                new Action(delegate { })
+                            );
+
+                            string scheduleName = SanitizeWorksheetName(schedule.Name);
+                            var data = PrepareScheduleData(schedule, writeAsString, excludeEmptyAllRows);
+                            scheduleDataList.Add((scheduleName, data));
+                        }
+
+                        // Export to Excel
+                        loadingWindow.UpdateStatus("Writing to Excel file...");
+
+                        // Force UI update
+                        loadingWindow.Dispatcher.Invoke(
+                            DispatcherPriority.Background,
+                            new Action(delegate { })
+                        );
+
+                        ExportToExcel(scheduleDataList, filePath);
+
+                        loadingWindow.UpdateStatus("Export complete!");
+
+                        // Force UI update
+                        loadingWindow.Dispatcher.Invoke(
+                            DispatcherPriority.Background,
+                            new Action(delegate { })
+                        );
+                    }
+                    finally {
+                        // Close loading window
+                        loadingWindow.Close();
+                    }
                 }
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) {
                 Autodesk.Revit.UI.TaskDialog.Show("Error", ex.Message);
                 return Result.Failed;
             }
@@ -68,54 +119,57 @@ namespace SchedulesExcelExport
         }
 
         public void ExportToExcel(
-            List<ViewSchedule> schedules, 
-            string filePath = null, 
-            bool numbersAsStrings = true,
-            bool excludeEmptyAllRows = false
-        )
-        {
-            ExcelPackage.LicenseContext = LicenseContext.Commercial;
+            List<(string name, List<List<object>> data)> scheduleDataList,
+            string filePath
+        ) {
+            FileInfo excelFile = new(filePath);
 
-            using (ExcelPackage excelPackage = new())
-            {
-                FileInfo excelFile = new(filePath);
+            if (excelFile.Exists && Helper.IsFileOpen(filePath)) {
+                MessageBox.Show("The Excel file is currently open. Please close it and try again.", "File In Use");
+                return;
+            }
 
-                if (excelFile.Exists && Helper.IsFileOpen(filePath))
-                {
-                    MessageBox.Show("The Excel file is currently open. Please close it and try again.", "File In Use");
-                    return;
-                }
+            XLWorkbook workbook;
 
-                if (excelFile.Exists)
-                {
-                    using (FileStream stream = new(filePath, FileMode.Open))
-                    {
-                        excelPackage.Load(stream);
+            // Load existing workbook or create new one
+            if (excelFile.Exists) {
+                workbook = new XLWorkbook(filePath);
+            }
+            else {
+                workbook = new XLWorkbook();
+            }
+
+            using (workbook) {
+                foreach (var scheduleData in scheduleDataList) {
+                    string scheduleName = scheduleData.name;
+                    var data = scheduleData.data;
+
+                    // Get existing worksheet or add new one
+                    IXLWorksheet worksheet;
+                    if (workbook.Worksheets.Contains(scheduleName)) {
+                        worksheet = workbook.Worksheet(scheduleName);
+                        worksheet.Clear(); // Clear existing content
+                    }
+                    else {
+                        worksheet = workbook.Worksheets.Add(scheduleName);
+                    }
+
+                    // Insert data starting at cell A1
+                    if (data.Count > 0) {
+                        worksheet.Cell(1, 1).InsertData(data);
                     }
                 }
 
-                foreach (ViewSchedule schedule in schedules)
-                {
-                    string scheduleName = SanitizeWorksheetName(schedule.Name);
-                    var worksheet = excelPackage.Workbook.Worksheets[scheduleName] ?? excelPackage.Workbook.Worksheets.Add(scheduleName);
-
-                    var data = PrepareScheduleData(schedule, numbersAsStrings, excludeEmptyAllRows);
-
-                    var startRow = 1;
-                    var startCol = 1;
-                    worksheet.Cells[startRow, startCol].LoadFromArrays(data.Select(row => row.ToArray()).ToArray());
-                }
-
+                // Ensure directory exists
                 Directory.CreateDirectory(Path.GetDirectoryName(filePath));
 
                 // Remove the default sheet if it is present
-                ExcelWorksheet defaultSheet = excelPackage.Workbook.Worksheets["Sheet1"];
-                if (defaultSheet != null)
-                {
-                    excelPackage.Workbook.Worksheets.Delete(defaultSheet);
+                var defaultSheet = workbook.Worksheets.FirstOrDefault(ws => ws.Name == "Sheet1");
+                if (defaultSheet != null && workbook.Worksheets.Count > 1) {
+                    defaultSheet.Delete();
                 }
 
-                excelPackage.SaveAs(excelFile);
+                workbook.SaveAs(filePath);
             }
 
             // Open the saved Excel file
@@ -130,8 +184,7 @@ namespace SchedulesExcelExport
             ViewSchedule schedule,
             bool numbersAsStrings = false,
             bool excludeAllEmptyRows = false
-        )
-        {
+        ) {
             TableData tableData = schedule.GetTableData();
             TableSectionData sectionData = tableData.GetSectionData(SectionType.Body);
 
@@ -140,34 +193,26 @@ namespace SchedulesExcelExport
 
             var data = new List<List<object>>(rowCount);
 
-            for (int row = 0; row < rowCount; row++)
-            {
-                if (!IsRowEmpty(schedule, row, colCount, excludeAllEmptyRows))
-                {
+            for (int row = 0; row < rowCount; row++) {
+                if (!IsRowEmpty(schedule, row, colCount, excludeAllEmptyRows)) {
                     var rowData = new List<object>(colCount);
 
-                    for (int col = 0; col < colCount; col++)
-                    {
+                    for (int col = 0; col < colCount; col++) {
                         string cellValue = schedule.GetCellText(SectionType.Body, row, col).Trim();
 
-                        if (!numbersAsStrings)
-                        {
+                        if (!numbersAsStrings) {
                             // Attempt to convert cell value to numeric types
-                            if (double.TryParse(cellValue, out double doubleValue))
-                            {
+                            if (double.TryParse(cellValue, out double doubleValue)) {
                                 rowData.Add(doubleValue);
                             }
-                            else if (int.TryParse(cellValue, out int intValue))
-                            {
+                            else if (int.TryParse(cellValue, out int intValue)) {
                                 rowData.Add(intValue);
                             }
-                            else
-                            {
+                            else {
                                 rowData.Add(cellValue);
                             }
                         }
-                        else
-                        {
+                        else {
                             rowData.Add(cellValue);
                         }
                     }
@@ -178,10 +223,14 @@ namespace SchedulesExcelExport
         }
 
 
-        private static string SanitizeWorksheetName(string name)
-        {
+        private static string SanitizeWorksheetName(string name) {
             // Replace characters that are not supported in sheet names
             string sanitized = Regex.Replace(name, @"[:\\/[\]*?]", "");
+
+            // Excel has a 31-character limit for worksheet names
+            if (sanitized.Length > 31) {
+                sanitized = sanitized.Substring(0, 31);
+            }
 
             return sanitized;
         }
@@ -192,26 +241,21 @@ namespace SchedulesExcelExport
         /// </summary>
         private static bool IsRowEmpty(
             ViewSchedule schedule,
-            int rowIndex, 
+            int rowIndex,
             int colCount,
             bool checkAllRows = false
-        )
-        {
-            if (checkAllRows || rowIndex == 1)
-            {
-                for (int colIndex = 0; colIndex < colCount; colIndex++)
-                {
+        ) {
+            if (checkAllRows || rowIndex == 1) {
+                for (int colIndex = 0; colIndex < colCount; colIndex++) {
                     string cellValue = schedule.GetCellText(SectionType.Body, rowIndex, colIndex);
 
-                    if (!string.IsNullOrWhiteSpace(cellValue))
-                    {
+                    if (!string.IsNullOrWhiteSpace(cellValue)) {
                         return false;
                     }
                 }
                 return true;
             }
-            else
-            {
+            else {
                 return false;
             }
         }

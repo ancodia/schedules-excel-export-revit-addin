@@ -1,0 +1,34 @@
+<Window x:Class="ScheduleExporter.LoadingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Exporting..." 
+        Height="120" 
+        Width="500"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        Background="White"
+        AllowsTransparency="False"
+        ShowInTaskbar="False"
+        Topmost="True">
+    
+    <Border BorderBrush="#CCCCCC" BorderThickness="1" Padding="20">
+        <StackPanel>
+            <TextBlock Text="Exporting schedules to Excel..." 
+                       FontSize="14" 
+                       FontWeight="SemiBold"
+                       HorizontalAlignment="Center"
+                       Margin="0,0,0,15"/>
+            
+            <ProgressBar IsIndeterminate="True" 
+                         Height="20"
+                         Margin="0,0,0,10"/>
+            
+            <TextBlock x:Name="textStatus" 
+                       Text="Please wait..." 
+                       FontSize="12"
+                       Foreground="#666666"
+                       HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Border>
+</Window>
