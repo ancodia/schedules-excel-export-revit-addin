@@ -2,7 +2,10 @@
 
 A Revit add-in that enables users to export multiple schedules from Autodesk Revit to Excel (.xlsx) format with advanced formatting and filtering options.
 
-<img width="301" height="440" alt="revit_clean(2)" src="https://github.com/user-attachments/assets/9ebd7fc6-0d32-4598-b775-6d2996cb466e" />
+<img width="431" height="604" alt="Schedules Excel Export" src="https://github.com/user-attachments/assets/ad99da64-15fb-44e4-b8dd-c4b1985b2581" />
+
+## Demo
+![excel-export](https://github.com/user-attachments/assets/456f3465-0b87-4bdf-a382-d6d6dbdff944)
 
 ## Features
 
@@ -51,7 +54,7 @@ A Revit add-in that enables users to export multiple schedules from Autodesk Rev
 
 1. **Launch the Add-in**
    - In Revit, go to Add-Ins tab → External Tools
-   - Click "Schedule Exporter" (or the command name defined in your `.addin` file)
+   - Click "Export Schedules to Excel" (or the command name defined in your `.addin` file)
 
 2. **Choose Export Destination**
    - Click **"New File"** to create a new Excel file, or
@@ -64,11 +67,11 @@ A Revit add-in that enables users to export multiple schedules from Autodesk Rev
 
 4. **Configure Export Options**
    - **Write numbers as strings**: 
-     - ✅ Checked (default): All cell values written as text
-     - ❌ Unchecked: Numeric values preserved as numbers in Excel
+     - Checked (default): All cell values written as text
+     - Unchecked: Numeric values preserved as numbers in Excel
    - **Exclude all empty rows**: 
-     - ✅ Checked: Removes all rows with no data
-     - ❌ Unchecked (default): Only removes empty header rows
+     - Checked: Removes all rows with no data
+     - Unchecked (default): Only removes empty header rows
 
 5. **Export**
    - Click **"Write"** to export
@@ -183,7 +186,7 @@ schedules-excel-export-revit-addin/
 │   ├── ScheduleExporter.cs     # UI form
 │   ├── Helper.cs               # Utility functions
 │   └── *.csproj                # Project file
-├── InnoSetup/                  # Installer configuration
+├── installer/                  # Installer configuration
 ├── .github/workflows/          # CI/CD workflows
 └── SchedulesExcelExport.sln    # Solution file
 ```
@@ -203,9 +206,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 For issues, questions, or suggestions, please open an issue on the [GitHub repository](https://github.com/ancodia/schedules-excel-export-revit-addin/issues).
 
 ## Changelog
-
-### v1.0.1 (Latest)
-- Latest stable release
 
 See the [Releases](https://github.com/ancodia/schedules-excel-export-revit-addin/releases) page for full version history.
 
