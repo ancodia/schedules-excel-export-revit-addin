@@ -5,7 +5,8 @@ A Revit add-in that enables users to export multiple schedules from Autodesk Rev
 <img width="431" height="604" alt="Schedules Excel Export" src="https://github.com/user-attachments/assets/ad99da64-15fb-44e4-b8dd-c4b1985b2581" />
 
 ## Demo
-![excel-export](https://github.com/user-attachments/assets/456f3465-0b87-4bdf-a382-d6d6dbdff944)
+https://github.com/user-attachments/assets/95aae6c2-9d08-4d59-bb04-c6c2f26fab2f
+
 
 ## Features
 
