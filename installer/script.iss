@@ -53,7 +53,6 @@ Name: revit24; Description: Addin for Autodesk Revit 2024;  Types: full
 Name: revit25; Description: Addin for Autodesk Revit 2025;  Types: full
 
 [Files]
-[Files]
 ; ========== Revit 2020 ==========
 Source: "{#Repository}\src\output\Release-2020\*.dll"; Excludes: "RevitAPI.dll,RevitAPIUI.dll,AdWindows.dll,UIFramework.dll"; DestDir: "{#RevitFolder20}"; Flags: ignoreversion; Components: revit20
 Source: "{#Repository}\src\*.addin"; DestDir: "{#RevitAddin20}"; Flags: ignoreversion; Components: revit20

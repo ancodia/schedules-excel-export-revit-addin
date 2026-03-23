@@ -35,7 +35,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: ${{ matrix.configuration }}
-        path: output/${{ matrix.configuration }}
+        path: src/output/${{ matrix.configuration }}
 
   compile_installer:
     runs-on: windows-latest
