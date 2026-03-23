@@ -19,8 +19,8 @@ jobs:
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v2
 
-    - name: Restore NuGet packages
-      run: nuget restore src/SchedulesExcelExport.sln
+    - name: Restore
+      run: dotnet restore SchedulesExcelExport.sln
 
     - name: Run build-installer.bat
       shell: cmd
